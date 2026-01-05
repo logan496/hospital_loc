@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  CreateDateColumn,
+} from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { Rating } from '../../ratings/entities/rating.entity';
 
@@ -35,7 +41,7 @@ export class User {
   @Column({ default: true })
   isActive: boolean;
 
-  @OneToMany(() => Rating, rating => rating.user)
+  @OneToMany(() => Rating, (rating) => rating.user)
   ratings: Rating[];
 
   @CreateDateColumn()

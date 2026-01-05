@@ -12,41 +12,40 @@ export class HospitalsService {
   ) {}
 
   async searchNearby(searchDto: SearchHospitalsDto) {
-    const {
-      latitude,
-      longitude,
-      radius,
-      type,
-      page = 1,
-      limit = 20,
-    } = searchDto;
+    const { latitude, longitude, radius, type, page = 1, limit = 20 } = searchDto;
 
-    // Formule Haversine pour calculer la distance
-    const query = this.hospitalsRepository
-      .createQueryBuilder('hospital')
-      .select([
-        'hospital.*',
-        `(
-          6371 * acos(
-            cos(radians(${latitude})) 
-            * cos(radians(hospital.latitude)) 
-            * cos(radians(hospital.longitude) - radians(${longitude})) 
-            + sin(radians(${latitude})) 
-            * sin(radians(hospital.latitude))
-          )
-        ) AS distance`,
-      ])
-      .where('hospital.isActive = :isActive', { isActive: true })
-      .having(`distance <= :radius`, { radius })
-      .orderBy('distance', 'ASC')
-      .skip((page - 1) * limit)
-      .take(limit);
+    // Construction de la requête SQL brute avec sous-requête
+    let query = `
+      SELECT * FROM (
+        SELECT 
+          hospital.*,
+          (
+            6371 * acos(
+              cos(radians(${latitude})) 
+              * cos(radians(hospital.latitude)) 
+              * cos(radians(hospital.longitude) - radians(${longitude})) 
+              + sin(radians(${latitude})) 
+              * sin(radians(hospital.latitude))
+            )
+          ) AS distance
+        FROM hospitals hospital
+        WHERE hospital."isActive" = true
+    `;
 
+    // Ajouter le filtre de type si nécessaire
     if (type) {
-      query.andWhere('hospital.type = :type', { type });
+      query += ` AND hospital.type = '${type}'`;
     }
 
-    const hospitals = await query.getRawMany();
+    query += `
+      ) AS results
+      WHERE distance <= ${radius}
+      ORDER BY distance ASC
+      LIMIT ${limit}
+      OFFSET ${(page - 1) * limit}
+    `;
+
+    const hospitals = await this.hospitalsRepository.query(query);
 
     return {
       data: hospitals,
@@ -89,14 +88,8 @@ export class HospitalsService {
       hospital.averageRating = 0;
       hospital.totalRatings = 0;
     } else {
-      const totalRating = services.reduce(
-        (sum, service) => sum + service.averageRating * service.totalRatings,
-        0,
-      );
-      const totalCount = services.reduce(
-        (sum, service) => sum + service.totalRatings,
-        0,
-      );
+      const totalRating = services.reduce((sum, service) => sum + service.averageRating * service.totalRatings, 0);
+      const totalCount = services.reduce((sum, service) => sum + service.totalRatings, 0);
 
       hospital.averageRating = totalCount > 0 ? totalRating / totalCount : 0;
       hospital.totalRatings = totalCount;
