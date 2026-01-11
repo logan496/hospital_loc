@@ -10,6 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { User } from '../users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { AuthResponseDto } from './dto/auth-response.dto';
 
 @Injectable()
 export class AuthService {
@@ -19,7 +20,7 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async register(registerDto: RegisterDto) {
+  async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
     const existingUser = await this.usersRepository.findOne({
       where: { email: registerDto.email },
     });
@@ -35,16 +36,20 @@ export class AuthService {
       password: hashedPassword,
     });
 
-    await this.usersRepository.save(user);
+    const savedUser = await this.usersRepository.save(user);
 
-    const { password, ...result } = user;
-    return {
-      user: result,
-      access_token: this.generateToken(user),
+    // Exclure le mot de passe de la réponse
+    const { password, ...userWithoutPassword } = savedUser;
+
+    const response: AuthResponseDto = {
+      user: userWithoutPassword as any,
+      access_token: this.generateToken(savedUser),
     };
+
+    return response;
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto): Promise<AuthResponseDto> {
     const user = await this.usersRepository.findOne({
       where: { email: loginDto.email },
     });
@@ -62,11 +67,15 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const { password, ...result } = user;
-    return {
-      user: result,
+    // Exclure le mot de passe de la réponse
+    const { password, ...userWithoutPassword } = user;
+
+    const response: AuthResponseDto = {
+      user: userWithoutPassword as any,
       access_token: this.generateToken(user),
     };
+
+    return response;
   }
 
   private generateToken(user: User): string {

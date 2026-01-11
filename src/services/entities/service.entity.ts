@@ -29,10 +29,12 @@ export class Service {
   @Column('decimal', { precision: 10, scale: 2, nullable: true })
   indicativePrice: number;
 
-  @ManyToOne(() => Hospital, hospital => hospital.services, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Hospital, (hospital) => hospital.services, {
+    onDelete: 'CASCADE',
+  })
   hospital: Hospital;
 
-  @OneToMany(() => Rating, rating => rating.service)
+  @OneToMany(() => Rating, (rating) => rating.service)
   ratings: Rating[];
 
   @CreateDateColumn()

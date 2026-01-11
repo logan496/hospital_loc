@@ -14,6 +14,10 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Utilisateur créé avec succès' })
   @ApiResponse({ status: 409, description: 'Email déjà utilisé' })
   register(@Body() registerDto: RegisterDto) {
+    // Log pour déboguer
+    console.log('Received data:', JSON.stringify(registerDto, null, 2));
+    console.log('Type of registerDto:', typeof registerDto);
+    console.log('Keys:', Object.keys(registerDto));
     return this.authService.register(registerDto);
   }
 
